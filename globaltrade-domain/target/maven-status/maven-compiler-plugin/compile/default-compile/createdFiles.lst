@@ -1,0 +1,8 @@
+lk/jiat/globaltrade/domain/AppUser.class
+lk/jiat/globaltrade/domain/AuditLog.class
+lk/jiat/globaltrade/domain/Vendor.class
+lk/jiat/globaltrade/domain/InventoryItem.class
+lk/jiat/globaltrade/domain/CustomsDeclaration.class
+lk/jiat/globaltrade/domain/RefreshToken.class
+lk/jiat/globaltrade/domain/Shipment.class
+lk/jiat/globaltrade/domain/VendorPerformance.class

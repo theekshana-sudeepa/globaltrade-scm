@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Deployment descriptor. Everything here could be an annotation; it is kept in XML
+  deliberately so the SAME EAR ARTEFACT can be promoted from test to production
+  with only this file changed - no recompilation. See documentation section 4.3.
+-->
+<ejb-jar xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+                             https://jakarta.ee/xml/ns/jakartaee/ejb-jar_4_0.xsd"
+         version="4.0">
+
+    <enterprise-beans>
+        <session>
+            <ejb-name>AuditServiceBean</ejb-name>
+            <transaction-type>Container</transaction-type>
+        </session>
+        <session>
+            <ejb-name>CustomsDeclarationServiceBean</ejb-name>
+            <transaction-type>Bean</transaction-type>
+        </session>
+    </enterprise-beans>
+
+    <assembly-descriptor>
+        <!-- Every audit write commits independently of the caller's transaction. -->
+        <container-transaction>
+            <method>
+                <ejb-name>AuditServiceBean</ejb-name>
+                <method-name>*</method-name>
+            </method>
+            <trans-attribute>RequiresNew</trans-attribute>
+        </container-transaction>
+
+        <!-- Read-only reporting methods never need to start a transaction. -->
+        <container-transaction>
+            <method>
+                <ejb-name>ShipmentServiceBean</ejb-name>
+                <method-name>findByTrackingNumber</method-name>
+            </method>
+            <trans-attribute>Supports</trans-attribute>
+        </container-transaction>
+
+        <!-- Application exception declared in XML rather than by annotation. -->
+        <application-exception>
+            <exception-class>lk.jiat.globaltrade.common.exception.CustomsComplianceException</exception-class>
+            <rollback>true</rollback>
+            <inherited>true</inherited>
+        </application-exception>
+
+        <!-- Security role references available to programmatic isCallerInRole checks. -->
+        <security-role><role-name>ADMIN</role-name></security-role>
+        <security-role><role-name>LOGISTICS_COORDINATOR</role-name></security-role>
+        <security-role><role-name>CUSTOMS_AGENT</role-name></security-role>
+        <security-role><role-name>WAREHOUSE_MANAGER</role-name></security-role>
+        <security-role><role-name>VENDOR_REP</role-name></security-role>
+        <security-role><role-name>CARRIER_SYSTEM</role-name></security-role>
+    </assembly-descriptor>
+</ejb-jar>

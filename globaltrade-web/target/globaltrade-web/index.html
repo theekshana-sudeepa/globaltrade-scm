@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GlobalTrade — Supply Chain Operations Console</title>
+<style>
+/* ==================================================================
+   GlobalTrade Operations Console
+   Single self-contained page. No external requests, no build step.
+   Palette: validated categorical slots 1-3 (blue / orange / aqua),
+   plus the reserved status palette. Light and dark are each selected
+   sets stepped for their own surface, not an automatic inversion.
+   ================================================================== */
+:root {
+  color-scheme: light;
+  --plane:        #f9f9f7;
+  --surface:      #fcfcfb;
+  --ink:          #0b0b0b;
+  --ink-2:        #52514e;
+  --ink-muted:    #898781;
+  --grid:         #e1e0d9;
+  --axis:         #c3c2b7;
+  --border:       rgba(11,11,11,0.10);
+  --track:        #eceae4;
+
+  --series-1:     #2a78d6;   /* blue   */
+  --series-2:     #eb6834;   /* orange */
+  --series-3:     #1baf7a;   /* aqua   */
+
+  --good:         #0ca30c;
+  --warning:      #fab219;
+  --serious:      #ec835a;
+  --critical:     #d03b3b;
+  --good-text:    #006300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plane:      #0d0d0d;
+    --surface:    #1a1a19;
+    --ink:        #ffffff;
+    --ink-2:      #c3c2b7;
+    --ink-muted:  #898781;
+    --grid:       #2c2c2a;
+    --axis:       #383835;
+    --border:     rgba(255,255,255,0.10);
+    --track:      #262624;
+    --series-1:   #3987e5;
+    --series-2:   #d95926;
+    --series-3:   #199e70;
+    --good-text:  #0ca30c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:      #0d0d0d;
+  --surface:    #1a1a19;
+  --ink:        #ffffff;
+  --ink-2:      #c3c2b7;
+  --ink-muted:  #898781;
+  --grid:       #2c2c2a;
+  --axis:       #383835;
+  --border:     rgba(255,255,255,0.10);
+  --track:      #262624;
+  --series-1:   #3987e5;
+  --series-2:   #d95926;
+  --series-3:   #199e70;
+  --good-text:  #0ca30c;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- layout ---------- */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 56px; }
+
+header.topbar {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.topbar-inner {
+  max-width: 1180px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand-mark {
+  width: 26px; height: 26px; border-radius: 6px; flex: none;
+  background: var(--series-1);
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: 12px; letter-spacing: -0.02em;
+}
+.brand h1 { font-size: 15px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+.brand .sub { font-size: 11.5px; color: var(--ink-muted); margin: 0; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--ink-2);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 4px 10px; background: var(--plane);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+button {
+  font: inherit; font-size: 13px;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface); color: var(--ink);
+  padding: 7px 13px; cursor: pointer;
+}
+button:hover { background: var(--plane); }
+button:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+button.primary { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+button.primary:hover { filter: brightness(0.94); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+input {
+  font: inherit; font-size: 13px;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--surface); color: var(--ink);
+  padding: 8px 11px; width: 100%;
+}
+input:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
+label.field { display: block; margin-bottom: 12px; }
+label.field span {
+  display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 5px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px 20px;
+  margin-bottom: 18px;
+}
+.card > h2 {
+  font-size: 14px; font-weight: 650; margin: 0 0 3px;
+  letter-spacing: -0.005em;
+}
+.card > .hint {
+  font-size: 12px; color: var(--ink-muted); margin: 0 0 16px;
+}
+.card-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.card-head .titles { margin-right: auto; }
+.card-head h2 { margin: 0 0 3px; font-size: 14px; font-weight: 650; }
+.card-head .hint { margin: 0; }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+/* ---------- stat tiles ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0 18px; }
+@media (max-width: 820px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+.tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 15px 16px 16px;
+}
+.tile .label { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.tile .value { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.05; }
+.tile .foot { font-size: 11.5px; color: var(--ink-muted); margin-top: 6px; }
+
+/* ---------- tables ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+  text-align: left; font-weight: 600; color: var(--ink-2);
+  padding: 7px 10px; border-bottom: 1px solid var(--axis);
+  white-space: nowrap; font-size: 11.5px; letter-spacing: 0.01em;
+}
+td { padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+code, .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* ---------- status pills (icon + label, never colour alone) ---------- */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 550; white-space: nowrap;
+  border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px 2px 7px;
+  background: var(--plane); color: var(--ink-2);
+}
+.pill .ic { font-size: 11px; line-height: 1; }
+.pill.good     { color: var(--good-text); }
+.pill.good .ic     { color: var(--good); }
+.pill.warning .ic  { color: var(--warning); }
+.pill.serious .ic  { color: var(--serious); }
+.pill.critical .ic { color: var(--critical); }
+
+/* ---------- bar chart ---------- */
+.bars { margin-top: 4px; }
+.bar-row { display: grid; grid-template-columns: 232px 1fr 72px; align-items: center; gap: 11px; padding: 4px 0; }
+@media (max-width: 720px) { .bar-row { grid-template-columns: 1fr; gap: 3px; } }
+.bar-label { font-size: 11.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { background: var(--track); border-radius: 4px; height: 14px; position: relative; overflow: hidden; }
+.bar-fill {
+  height: 100%; background: var(--series-1);
+  border-radius: 0 4px 4px 0;    /* 4px rounded data-end, square at the baseline */
+  min-width: 3px;
+}
+.bar-value { font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ---------- pipeline strip ---------- */
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.strip { display: flex; gap: 2px; height: 24px; margin-bottom: 6px; }   /* 2px surface gap */
+.strip-seg { border-radius: 3px; min-width: 3px; }
+.strip-labels { display: flex; gap: 2px; }
+.strip-label { font-size: 11px; color: var(--ink-muted); overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 0; }
+
+.empty { color: var(--ink-muted); font-size: 12.5px; padding: 10px 0; }
+.err {
+  border: 1px solid var(--critical); border-left-width: 3px;
+  border-radius: 7px; padding: 10px 12px; font-size: 12.5px;
+  color: var(--ink); background: var(--surface); margin-bottom: 14px;
+}
+.note {
+  font-size: 11.5px; color: var(--ink-muted); margin-top: 12px;
+  padding-top: 11px; border-top: 1px solid var(--grid);
+}
+.tabs { display: flex; gap: 6px; }
+.tabs button.on { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+.hidden { display: none !important; }
+.login-wrap { max-width: 420px; margin: 60px auto; }
+.creds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+footer.foot { color: var(--ink-muted); font-size: 11.5px; text-align: center; padding: 6px 0 0; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">GT</div>
+      <div>
+        <h1>GlobalTrade — Supply Chain Operations Console</h1>
+        <p class="sub">JIAT/BCD II/EX/01 · Jakarta EE 10 · WildFly · MySQL</p>
+      </div>
+    </div>
+    <span class="chip" id="connChip"><span class="dot" style="background:var(--ink-muted)"></span><span id="connText">Not connected</span></span>
+    <span class="chip hidden" id="userChip"></span>
+    <button id="themeBtn" title="Toggle light / dark">◐ Theme</button>
+    <button id="logoutBtn" class="hidden">Sign out</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= LOGIN ================= -->
+  <section id="loginView" class="login-wrap">
+    <div class="card">
+      <h2>Sign in</h2>
+      <p class="hint">Authenticates through <code>POST /api/auth/login</code>, which issues a
+        5-minute HS256 access token plus a rotating refresh token.</p>
+      <div id="schemeWarn" class="err hidden"></div>
+      <div id="loginErr" class="err hidden"></div>
+      <label class="field"><span>Email</span>
+        <input id="email" type="email" value="admin@globaltrade.lk" autocomplete="username"></label>
+      <label class="field"><span>Password</span>
+        <input id="password" type="password" value="Passw0rd!2026" autocomplete="current-password"></label>
+      <button class="primary" id="loginBtn" style="width:100%">Sign in</button>
+      <p class="note">Seeded accounts — <code>admin@</code>, <code>coordinator@</code>,
+        <code>customs@</code>, <code>warehouse@globaltrade.lk</code> and
+        <code>rep@acme-supplies.com</code> — all use the demo password above.
+        Passwords are stored as PBKDF2-WithHmacSHA256 hashes at 210,000 iterations
+        with a per-user salt; the token is held in memory only and is lost on refresh.</p>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD ================= -->
+  <main id="appView" class="hidden">
+
+    <div class="kpis">
+      <div class="tile"><div class="label">Shipments in transit</div>
+        <div class="value" id="kpiTransit">—</div>
+        <div class="foot">BOOKED or IN_TRANSIT</div></div>
+      <div class="tile"><div class="label">Overdue shipments</div>
+        <div class="value" id="kpiOverdue">—</div>
+        <div class="foot">Past estimated arrival</div></div>
+      <div class="tile"><div class="label">Automatic timers</div>
+        <div class="value" id="kpiTimers">—</div>
+        <div class="foot" id="kpiTimersFoot">Registered at deployment</div></div>
+      <div class="tile"><div class="label">Monitored methods</div>
+        <div class="value" id="kpiMethods">—</div>
+        <div class="foot">Instrumented by the interceptor chain</div></div>
+    </div>
+
+    <div class="cols">
+
+      <!-- ---------- TIMERS ---------- -->
+      <section class="card">
+        <div class="card-head">
+          <div class="titles">
+            <h2>EJB Timer Service</h2>
+            <p class="hint">Automatic timers created by the container from <code>@Schedule</code>,
+              plus programmatic timers created at runtime through <code>TimerService</code>.</p>
+          </div>
+          <button id="refreshTimers">Refresh</button>
+        </div>
+        <div id="timersBody"><p class="empty">Loading…</p></div>
+        <p class="note">A <strong>persistent</strong> timer is written to the WildFly timer
+          datastore and is restored after a restart; in a cluster it fires on a single
+          elected node. A non-persistent timer lives in JVM memory and fires on every node.</p>
+      </section>
+
+      <!-- ---------- METRICS ---------- -->
+      <section class="card">
+        <div class="card-head">
+          <div class="titles">
+            <h2>Interceptor performance monitoring</h2>
+            <p class="hint">Mean execution time per business method, recorded by
+              <code>PerformanceMonitoringInterceptor</code> — the innermost interceptor,
+              so it times the business method rather than the chain around it.</p>
+          </div>
+          <div class="tabs">
+            <button id="mChart" class="on">Chart</button>
+            <button id="mTable">Table</button>
+          </div>
+        </div>
+        <div id="metricsBody"><p class="empty">Loading…</p></div>
+      </section>
+    </div>
+
+    <!-- ---------- PIPELINE ---------- -->
+    <section class="card">
+      <div class="card-head">
+        <div class="titles">
+          <h2>Instrumented operation pipeline</h2>
+          <p class="hint">Runs a three-leg supply chain operation and times each leg from the
+            browser: read a shipment, write its status through the full interceptor chain and a
+            container-managed transaction, then read back the monitoring metrics.</p>
+        </div>
+        <button class="primary" id="runPipeline">Run operation</button>
+      </div>
+      <div id="pipelineBody"><p class="empty">Not run yet — press <em>Run operation</em>.</p></div>
+    </section>
+
+    <!-- ---------- SECURITY PROBE ---------- -->
+    <section class="card">
+      <div class="card-head">
+        <div class="titles">
+          <h2>Security probe</h2>
+          <p class="hint">Attacks the deployed API from this browser and reports the HTTP status
+            returned for each attempt. Covers test cases TC7 and TC9 to TC15.</p>
+        </div>
+        <button class="primary" id="runProbe">Run probe</button>
+      </div>
+      <div class="creds" style="margin-bottom:14px">
+        <label class="field" style="margin:0"><span>Vendor account (for role tests)</span>
+          <input id="vEmail" value="rep@acme-supplies.com"></label>
+        <label class="field" style="margin:0"><span>Vendor password</span>
+          <input id="vPass" type="password" value="Passw0rd!2026"></label>
+      </div>
+      <div id="probeBody"><p class="empty">Not run yet — press <em>Run probe</em>.</p></div>
+    </section>
+
+    <!-- ---------- SHIPMENTS ---------- -->
+    <section class="card">
+      <div class="card-head">
+        <div class="titles">
+          <h2>Shipments</h2>
+          <p class="hint">Read through <code>ShipmentServiceBean</code>. The overdue view runs
+            under <code>NOT_SUPPORTED</code>, so a long reporting sweep never holds a
+            transaction open.</p>
+        </div>
+        <div class="tabs">
+          <button id="sTransit" class="on">In transit</button>
+          <button id="sOverdue">Overdue</button>
+        </div>
+      </div>
+      <div id="shipBody"><p class="empty">Loading…</p></div>
+    </section>
+
+    <footer class="foot">
+      <span id="envLine">—</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- API base: this page is served from the same context as the API ----
+  var ctx  = location.pathname.replace(/\/[^/]*$/, "");
+  var BASE = (ctx === "/" ? "" : ctx) + "/api";
+
+  var token = null, refreshToken = null, principal = null, roles = [];
+  var metricsView = "chart", shipView = "transit";
+  var lastMetrics = [];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  };
+  var ms = function (n) { return (Math.round(n * 100) / 100).toFixed(2); };
+
+  // Trim the redundant "…ServiceBean"/"…Bean" suffix so the axis label fits.
+  // The full name stays in the tooltip and in the table view.
+  var shortMethod = function (m) {
+    var i = m.indexOf(".");
+    if (i < 0) return m;
+    return m.slice(0, i).replace(/(Service)?Bean$/, "") + m.slice(i);
+  };
+
+  // ---------------- theme ----------------
+  $("themeBtn").onclick = function () {
+    var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+  };
+
+  // ---------------- HTTP ----------------
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = opts.headers || {};
+    if (opts.auth !== false && token) headers["Authorization"] = "Bearer " + token;
+    if (opts.body) headers["Content-Type"] = "application/json";
+    return fetch(BASE + path, {
+      method: opts.method || "GET",
+      headers: headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+  }
+
+  function apiJson(path, opts) {
+    return api(path, opts).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(r.status + " " + (t || r.statusText)); });
+      return r.status === 204 ? null : r.json();
+    });
+  }
+
+  // ---------------- auth ----------------
+  function setConn(ok, text) {
+    $("connChip").innerHTML =
+      '<span class="dot" style="background:' + (ok ? "var(--good)" : "var(--ink-muted)") + '"></span>' +
+      "<span>" + esc(text) + "</span>";
+  }
+
+  $("loginBtn").onclick = function () {
+    var btn = this;
+    btn.disabled = true; btn.textContent = "Signing in…";
+    $("loginErr").classList.add("hidden");
+
+    api("/auth/login", { method: "POST", auth: false,
+        body: { username: $("email").value.trim(), password: $("password").value } })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error((res.j && res.j.message) || ("HTTP " + res.status));
+        token = res.j.accessToken; refreshToken = res.j.refreshToken;
+        principal = res.j.username; roles = res.j.roles || [];
+        $("loginView").classList.add("hidden");
+        $("appView").classList.remove("hidden");
+        $("logoutBtn").classList.remove("hidden");
+        var chip = $("userChip");
+        chip.classList.remove("hidden");
+        chip.innerHTML = '<span class="dot" style="background:var(--series-1)"></span><span>' +
+          esc(principal) + " · " + esc(roles.join(", ")) + "</span>";
+        setConn(true, "Connected");
+        $("envLine").textContent =
+          "Signed in as " + principal + " · access token expires in " +
+          (res.j.expiresIn || 300) + " s · API base " + BASE;
+        loadAll();
+      })
+      .catch(function (e) {
+        var box = $("loginErr");
+        box.classList.remove("hidden");
+        box.innerHTML = "<strong>Sign-in failed.</strong> " + esc(e.message) +
+          "<br>If the browser reports a network or mixed-content error, open this page over " +
+          "HTTPS at <code>https://localhost:8443" + ctx + "/</code> and accept the " +
+          "self-signed certificate — <code>web.xml</code> declares a CONFIDENTIAL " +
+          "transport guarantee on <code>/api/*</code>.";
+      })
+      .then(function () { btn.disabled = false; btn.textContent = "Sign in"; });
+  };
+
+  $("logoutBtn").onclick = function () {
+    api("/auth/logout", { method: "POST", body: { refreshToken: refreshToken } })
+      .catch(function () {})
+      .then(function () { location.reload(); });
+  };
+
+  // ---------------- timers ----------------
+  function parseTimers(raw) {
+    return String(raw || "").split("\n").filter(function (l) { return l.trim(); })
+      .map(function (line) {
+        var info = (line.split(" next=")[0] || "").trim();
+        var m = line.match(/next=(.*?)\s+persistent=(true|false)/);
+        return {
+          info: info,
+          next: m ? m[1].trim() : "—",
+          persistent: m ? m[2] === "true" : null
+        };
+      });
+  }
+
+  function loadTimers() {
+    return apiJson("/admin/monitoring/timers").then(function (d) {
+      var list = parseTimers(d.automaticTimers);
+      $("kpiTimers").textContent = list.length;
+      $("kpiTimersFoot").textContent =
+        list.length + " automatic · " + (d.programmaticCount || 0) + " programmatic";
+
+      if (!list.length) {
+        $("timersBody").innerHTML = '<p class="empty">No timers reported. Confirm the server ' +
+          'was started with <code>-c standalone-full.xml</code>.</p>';
+        return;
+      }
+      var rows = list.map(function (t) {
+        var pill = t.persistent
+          ? '<span class="pill good"><span class="ic">●</span>Persistent</span>'
+          : '<span class="pill warning"><span class="ic">○</span>In memory</span>';
+        return "<tr><td><code>" + esc(t.info) + "</code></td><td>" + pill +
+               '</td><td class="mono" style="color:var(--ink-2)">' + esc(t.next) + "</td></tr>";
+      }).join("");
+      $("timersBody").innerHTML =
+        "<table><thead><tr><th>Timer</th><th>Durability</th><th>Next fire</th></tr></thead><tbody>" +
+        rows + "</tbody></table>";
+    }).catch(function (e) {
+      $("timersBody").innerHTML = '<div class="err">Could not load timers — ' + esc(e.message) + "</div>";
+    });
+  }
+
+  // ---------------- metrics ----------------
+  function renderMetrics() {
+    var host = $("metricsBody");
+    if (!lastMetrics.length) {
+      host.innerHTML = '<p class="empty">No invocations recorded yet. Use the console for a ' +
+        'moment, or press <em>Run operation</em> below, then refresh.</p>';
+      return;
+    }
+    var data = lastMetrics.slice().sort(function (a, b) { return b.avgMillis - a.avgMillis; }).slice(0, 9);
+    var max = Math.max.apply(null, data.map(function (d) { return d.avgMillis; })) || 1;
+
+    if (metricsView === "chart") {
+      // One series, one colour for every bar. Length carries magnitude; hue carries nothing.
+      host.innerHTML = '<div class="bars">' + data.map(function (d) {
+        var pct = Math.max(1.5, (d.avgMillis / max) * 100);
+        return '<div class="bar-row">' +
+          '<div class="bar-label" title="' + esc(d.method) + '">' + esc(shortMethod(d.method)) + "</div>" +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+          '<div class="bar-value">' + ms(d.avgMillis) + " ms</div>" +
+        "</div>";
+      }).join("") + "</div>" +
+      '<p class="note">Mean milliseconds per invocation. Bars share one colour because a single ' +
+      'series is being compared — length already encodes the magnitude.</p>';
+    } else {
+      host.innerHTML = "<table><thead><tr><th>Method</th>" +
+        '<th class="num">Calls</th><th class="num">Mean ms</th>' +
+        '<th class="num">Max ms</th><th class="num">Failures</th></tr></thead><tbody>' +
+        lastMetrics.map(function (d) {
+          return "<tr><td><code>" + esc(d.method) + "</code></td>" +
+            '<td class="num">' + d.invocations + "</td>" +
+            '<td class="num">' + ms(d.avgMillis) + "</td>" +
+            '<td class="num">' + ms(d.maxMillis) + "</td>" +
+            '<td class="num">' + (d.failures > 0
+              ? '<span class="pill critical"><span class="ic">▲</span>' + d.failures + "</span>"
+              : "0") + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+  }
+
+  function loadMetrics() {
+    return apiJson("/admin/monitoring/metrics").then(function (d) {
+      lastMetrics = d.metrics || [];
+      $("kpiMethods").textContent = d.methodCount != null ? d.methodCount : lastMetrics.length;
+      renderMetrics();
+    }).catch(function (e) {
+      $("metricsBody").innerHTML = '<div class="err">Could not load metrics — ' + esc(e.message) + "</div>";
+    });
+  }
+
+  $("mChart").onclick = function () {
+    metricsView = "chart"; this.classList.add("on"); $("mTable").classList.remove("on"); renderMetrics();
+  };
+  $("mTable").onclick = function () {
+    metricsView = "table"; this.classList.add("on"); $("mChart").classList.remove("on"); renderMetrics();
+  };
+
+  // ---------------- shipments ----------------
+  var shipCache = { transit: null, overdue: null };
+
+  function statusPill(s) {
+    var map = {
+      DELIVERED: ["good", "●"], CUSTOMS_CLEARED: ["good", "●"],
+      DELAYED: ["warning", "▲"], EXCEPTION: ["critical", "▲"], CANCELLED: ["critical", "■"],
+      AT_CUSTOMS: ["serious", "◆"]
+    };
+    var m = map[s] || ["", "○"];
+    return '<span class="pill ' + m[0] + '"><span class="ic">' + m[1] + "</span>" + esc(s) + "</span>";
+  }
+
+  function renderShipments() {
+    var d = shipCache[shipView];
+    if (!d) { $("shipBody").innerHTML = '<p class="empty">Loading…</p>'; return; }
+    if (!d.items || !d.items.length) {
+      $("shipBody").innerHTML = '<p class="empty">No shipments in this view.</p>'; return;
+    }
+    $("shipBody").innerHTML = "<table><thead><tr><th>Tracking</th><th>Route</th><th>Carrier</th>" +
+      "<th>Status</th><th>Estimated arrival</th></tr></thead><tbody>" +
+      d.items.map(function (s) {
+        var eta = s.estimatedArrival ? new Date(s.estimatedArrival).toLocaleString() : "—";
+        return "<tr><td><code>" + esc(s.trackingNumber) + "</code></td>" +
+          "<td>" + esc(s.originCountry) + " → " + esc(s.destinationCountry) + "</td>" +
+          "<td>" + esc(s.carrierCode) + "</td>" +
+          "<td>" + statusPill(s.status) + "</td>" +
+          '<td class="mono" style="color:var(--ink-2)">' + esc(eta) + "</td></tr>";
+      }).join("") + "</tbody></table>";
+  }
+
+  function loadShipments() {
+    return Promise.all([
+      apiJson("/shipments/in-transit").catch(function () { return { items: [] }; }),
+      apiJson("/shipments/overdue").catch(function () { return { items: [] }; })
+    ]).then(function (r) {
+      shipCache.transit = r[0]; shipCache.overdue = r[1];
+      $("kpiTransit").textContent = (r[0].items || []).length;
+      $("kpiOverdue").textContent = (r[1].items || []).length;
+      renderShipments();
+    });
+  }
+
+  $("sTransit").onclick = function () {
+    shipView = "transit"; this.classList.add("on"); $("sOverdue").classList.remove("on"); renderShipments();
+  };
+  $("sOverdue").onclick = function () {
+    shipView = "overdue"; this.classList.add("on"); $("sTransit").classList.remove("on"); renderShipments();
+  };
+
+  // ---------------- pipeline ----------------
+  var STAGES = [
+    { key: "read",    name: "Read shipment",   colour: "var(--series-1)" },
+    { key: "write",   name: "Update status",   colour: "var(--series-2)" },
+    { key: "metrics", name: "Read metrics",    colour: "var(--series-3)" }
+  ];
+
+  $("runPipeline").onclick = function () {
+    var btn = this, host = $("pipelineBody");
+    var tracking = (shipCache.transit && shipCache.transit.items && shipCache.transit.items[0])
+      ? shipCache.transit.items[0].trackingNumber : null;
+    if (!tracking) {
+      host.innerHTML = '<div class="err">No in-transit shipment available to exercise. ' +
+        "Run <code>database/02-seed.sql</code> first.</div>";
+      return;
+    }
+    btn.disabled = true; btn.textContent = "Running…";
+    host.innerHTML = '<p class="empty">Running…</p>';
+
+    var timings = {}, shipment = null, t0;
+
+    t0 = performance.now();
+    apiJson("/shipments/" + encodeURIComponent(tracking))
+      .then(function (s) {
+        timings.read = performance.now() - t0;
+        shipment = s;
+        t0 = performance.now();
+        // Same-status write: a legal transition, so the state machine accepts it and
+        // the full interceptor chain plus the CMT boundary are exercised without
+        // mutating business state.
+        return apiJson("/shipments/" + encodeURIComponent(tracking) + "/status",
+                       { method: "PUT", body: { status: s.status } });
+      })
+      .then(function () {
+        timings.write = performance.now() - t0;
+        t0 = performance.now();
+        return apiJson("/admin/monitoring/metrics");
+      })
+      .then(function (m) {
+        timings.metrics = performance.now() - t0;
+        lastMetrics = m.metrics || [];
+        renderMetrics();
+
+        var server = null;
+        (lastMetrics || []).forEach(function (x) {
+          if (x.method === "ShipmentServiceBean.updateStatus") server = x.avgMillis;
+        });
+
+        var total = STAGES.reduce(function (a, s) { return a + timings[s.key]; }, 0);
+
+        // flex-grow weights (not percentage widths) so the 2px surface gaps
+        // between segments come out of the track rather than overflowing it.
+        var strip = STAGES.map(function (s) {
+          var w = Math.max(timings[s.key], 0.01);
+          return '<div class="strip-seg" style="flex:' + w.toFixed(4) +
+                 ' 1 0;background:' + s.colour + '"></div>';
+        }).join("");
+
+        var labels = STAGES.map(function (s) {
+          var w = Math.max(timings[s.key], 0.01);
+          return '<div class="strip-label" style="flex:' + w.toFixed(4) + ' 1 0">' +
+                 ms(timings[s.key]) + " ms</div>";
+        }).join("");
+
+        var legend = STAGES.map(function (s) {
+          return '<span class="legend-item"><span class="swatch" style="background:' +
+                 s.colour + '"></span>' + esc(s.name) + "</span>";
+        }).join("");
+
+        var split = "";
+        if (server != null) {
+          var overhead = timings.write - server;
+          split = "<tr><td>Server-side business method (running mean)<br>" +
+            '<span style="color:var(--ink-muted);font-size:11px">' +
+            "ShipmentServiceBean.updateStatus, timed by the innermost interceptor</span></td>" +
+            '<td class="num">' + ms(server) + " ms</td></tr>" +
+            "<tr><td>Derived container and network overhead<br>" +
+            '<span style="color:var(--ink-muted);font-size:11px">' +
+            (overhead >= 0
+              ? "this round trip minus the running mean"
+              : "not derivable from this run \u2014 the running mean is drawn from " +
+                "all invocations to date and exceeds this single round trip") +
+            "</span></td>" +
+            '<td class="num">' + (overhead >= 0 ? ms(overhead) + " ms" : "n/a") + "</td></tr>";
+        }
+
+        host.innerHTML =
+          '<div class="legend">' + legend + "</div>" +
+          '<div class="strip">' + strip + "</div>" +
+          '<div class="strip-labels">' + labels + "</div>" +
+          '<p style="margin:14px 0 4px;font-size:13px">Total round trip ' +
+            "<strong>" + ms(total) + " ms</strong> across three legs against <code>" +
+            esc(tracking) + "</code> (" + esc(shipment.status) + ").</p>" +
+          "<table style=\"margin-top:10px\"><thead><tr><th>Stage</th><th class='num'>Duration</th></tr></thead><tbody>" +
+            STAGES.map(function (s) {
+              return "<tr><td>" + esc(s.name) + '</td><td class="num">' + ms(timings[s.key]) + " ms</td></tr>";
+            }).join("") + split +
+          "</tbody></table>" +
+          '<p class="note">Leg durations are measured in the browser with ' +
+          "<code>performance.now()</code>, so each includes network transit and JSON " +
+          "serialisation as well as server work. The server-side figure comes from " +
+          "<code>MetricsRegistry</code> and is the business method alone, averaged over every " +
+          "invocation since deployment \u2014 so it is a running mean, not this call. Subtracting " +
+          "it therefore gives an indication of container and network overhead, not a measurement " +
+          "of it; a per-call server timing header would be required for that.</p>";
+      })
+      .catch(function (e) {
+        host.innerHTML = '<div class="err">Pipeline failed — ' + esc(e.message) + "</div>";
+      })
+      .then(function () { btn.disabled = false; btn.textContent = "Run operation"; });
+  };
+
+  // ---------------- security probe ----------------
+  $("runProbe").onclick = function () {
+    var btn = this, host = $("probeBody");
+    btn.disabled = true; btn.textContent = "Probing…";
+    host.innerHTML = '<p class="empty">Running probes…</p>';
+
+    var tracking = (shipCache.transit && shipCache.transit.items && shipCache.transit.items[0])
+      ? shipCache.transit.items[0].trackingNumber : "GTLKGB0000001";
+
+    // Log in as a vendor representative so the role tests use a real low-privilege token.
+    api("/auth/login", { method: "POST", auth: false,
+        body: { username: $("vEmail").value.trim(), password: $("vPass").value } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (v) {
+        var vTok = v ? v.accessToken : null;
+        var bad  = token ? token.slice(0, -1) + (token.slice(-1) === "A" ? "B" : "A") : "x.y.z";
+
+        var probes = [
+          { id: "TC9",  name: "Unauthenticated request",
+            detail: "GET /shipments/" + tracking + " with no Authorization header",
+            expect: 401, run: function () { return api("/shipments/" + encodeURIComponent(tracking), { auth: false }); } },
+
+          { id: "TC11", name: "Tampered token signature",
+            detail: "Final signature character altered",
+            expect: 401, run: function () { return api("/shipments/" + encodeURIComponent(tracking),
+              { auth: false, headers: { Authorization: "Bearer " + bad } }); } },
+
+          { id: "TC12", name: "Wrong role on an admin endpoint",
+            detail: "VENDOR_REP token → GET /admin/monitoring/metrics",
+            expect: 403, run: function () { return api("/admin/monitoring/metrics",
+              { auth: false, headers: { Authorization: "Bearer " + vTok } }); } },
+
+          { id: "TC13", name: "Horizontal privilege escalation",
+            detail: "VENDOR_REP token → a shipment owned by a different vendor",
+            expect: 403, run: function () { return api("/shipments/GTSEUS0000002",
+              { auth: false, headers: { Authorization: "Bearer " + vTok } }); } },
+
+          { id: "TC15", name: "SQL injection in a path parameter",
+            detail: "Tracking number \"'; DROP TABLE shipment;--\"",
+            expect: 404, run: function () { return api("/shipments/" +
+              encodeURIComponent("'; DROP TABLE shipment;--")); } },
+
+          { id: "TC7",  name: "Invalid credentials",
+            detail: "POST /auth/login with a wrong password",
+            expect: 401, run: function () { return api("/auth/login", { method: "POST", auth: false,
+              body: { username: "customs@globaltrade.lk", password: "definitely-wrong" } }); } }
+        ];
+
+        return probes.reduce(function (chain, p) {
+          return chain.then(function (acc) {
+            return p.run()
+              .then(function (r) { acc.push({ p: p, got: r.status }); return acc; })
+              .catch(function () { acc.push({ p: p, got: 0 }); return acc; });
+          });
+        }, Promise.resolve([]));
+      })
+      .then(function (results) {
+        var passed = 0;
+        var rows = results.map(function (r) {
+          var ok = r.got === r.p.expect;
+          if (ok) passed++;
+          var pill = ok
+            ? '<span class="pill good"><span class="ic">✔</span>Blocked as expected</span>'
+            : '<span class="pill critical"><span class="ic">✖</span>Unexpected</span>';
+          return "<tr><td><strong>" + r.p.id + "</strong></td>" +
+            "<td>" + esc(r.p.name) + "<br>" +
+            '<span style="color:var(--ink-muted);font-size:11px">' + esc(r.p.detail) + "</span></td>" +
+            '<td class="num">' + r.p.expect + "</td>" +
+            '<td class="num">' + (r.got || "—") + "</td>" +
+            "<td>" + pill + "</td></tr>";
+        }).join("");
+
+        host.innerHTML =
+          '<p style="margin:0 0 12px;font-size:13px"><strong>' + passed + " of " + results.length +
+          "</strong> probes returned the expected status.</p>" +
+          "<table><thead><tr><th>Case</th><th>Attack</th>" +
+          '<th class="num">Expected</th><th class="num">Actual</th><th>Result</th>' +
+          "</tr></thead><tbody>" + rows + "</tbody></table>" +
+          '<p class="note">Each row is a real HTTP request issued from this browser against the ' +
+          "deployed application. 401 means the container rejected the identity; 403 means it " +
+          "accepted the identity and refused the operation — the distinction between " +
+          "authentication and authorisation, visible in the response.</p>";
+      })
+      .catch(function (e) {
+        host.innerHTML = '<div class="err">Probe failed — ' + esc(e.message) + "</div>";
+      })
+      .then(function () { btn.disabled = false; btn.textContent = "Run probe"; });
+  };
+
+  // ---------------- boot ----------------
+  function loadAll() {
+    return Promise.all([loadTimers(), loadMetrics(), loadShipments()]);
+  }
+  $("refreshTimers").onclick = loadTimers;
+
+  setConn(false, "Not signed in");
+
+  // web.xml declares CONFIDENTIAL on /api/*, so an API call made from an http:
+  // page is redirected to https and the browser blocks it as cross-origin.
+  // Say so before the user hits a confusing failure, not after.
+  if (location.protocol === "http:") {
+    var httpsUrl = "https://" + location.hostname + ":8443" + location.pathname;
+    var w = $("schemeWarn");
+    w.classList.remove("hidden");
+    w.innerHTML = "<strong>Open this console over HTTPS.</strong> " +
+      "<code>web.xml</code> declares a CONFIDENTIAL transport guarantee on " +
+      "<code>/api/*</code>, so calls from an <code>http:</code> page are redirected to " +
+      "TLS and blocked by the browser as cross-origin.<br><br>" +
+      '<a href="' + httpsUrl + '" style="color:var(--series-1)">' + httpsUrl + "</a>" +
+      " — accept the self-signed certificate once, then sign in.";
+  }
+})();
+</script>
+</body>
+</html>

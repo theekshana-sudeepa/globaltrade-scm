@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="https://jakarta.ee/xml/ns/jakartaee"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+                           https://jakarta.ee/xml/ns/jakartaee/beans_4_0.xsd"
+       version="4.0" bean-discovery-mode="annotated">
+    <!--
+      CDI interceptors carry @Priority so they are enabled globally and ordered
+      deterministically. They are listed here as well for explicitness and so
+      the ordering is visible to anyone reading the descriptor.
+      Lower priority value == runs earlier == outermost in the chain.
+    -->
+    <interceptors>
+        <class>lk.jiat.globaltrade.ejb.interceptor.SecurityAuditInterceptor</class>
+        <class>lk.jiat.globaltrade.ejb.interceptor.VendorDataValidationInterceptor</class>
+        <class>lk.jiat.globaltrade.ejb.interceptor.ComplianceCheckInterceptor</class>
+        <class>lk.jiat.globaltrade.ejb.interceptor.AuditLoggingInterceptor</class>
+        <class>lk.jiat.globaltrade.ejb.interceptor.PerformanceMonitoringInterceptor</class>
+    </interceptors>
+</beans>

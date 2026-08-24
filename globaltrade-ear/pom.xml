@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>lk.jiat.globaltrade</groupId>
+        <artifactId>globaltrade-scm</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <artifactId>globaltrade-ear</artifactId>
+    <packaging>ear</packaging>
+    <name>GlobalTrade :: EAR</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>lk.jiat.globaltrade</groupId>
+            <artifactId>globaltrade-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>lk.jiat.globaltrade</groupId>
+            <artifactId>globaltrade-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>lk.jiat.globaltrade</groupId>
+            <artifactId>globaltrade-ejb</artifactId>
+            <version>${project.version}</version>
+            <type>ejb</type>
+        </dependency>
+        <dependency>
+            <groupId>lk.jiat.globaltrade</groupId>
+            <artifactId>globaltrade-web</artifactId>
+            <version>${project.version}</version>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>globaltrade-scm</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-ear-plugin</artifactId>
+                <configuration>
+                    <version>10</version>
+                    <defaultLibBundleDir>lib</defaultLibBundleDir>
+                    <!--
+                      CLASSLOADER STRATEGY:
+                      common + domain + java-jwt go into EAR/lib exactly ONCE, so
+                      both the EJB module and the WAR module see the SAME Class
+                      objects. Duplicating them in WEB-INF/lib would create two
+                      loaders and a ClassCastException at the module boundary.
+                    -->
+                    <modules>
+                        <jarModule>
+                            <groupId>lk.jiat.globaltrade</groupId>
+                            <artifactId>globaltrade-common</artifactId>
+                            <bundleDir>lib</bundleDir>
+                        </jarModule>
+                        <jarModule>
+                            <groupId>lk.jiat.globaltrade</groupId>
+                            <artifactId>globaltrade-domain</artifactId>
+                            <bundleDir>lib</bundleDir>
+                        </jarModule>
+                        <ejbModule>
+                            <groupId>lk.jiat.globaltrade</groupId>
+                            <artifactId>globaltrade-ejb</artifactId>
+                            <bundleFileName>globaltrade-ejb.jar</bundleFileName>
+                        </ejbModule>
+                        <webModule>
+                            <groupId>lk.jiat.globaltrade</groupId>
+                            <artifactId>globaltrade-web</artifactId>
+                            <bundleFileName>globaltrade-web.war</bundleFileName>
+                            <contextRoot>/globaltrade</contextRoot>
+                        </webModule>
+                    </modules>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
