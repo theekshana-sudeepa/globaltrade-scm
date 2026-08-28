@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  * Timer population fell from ~50,000 to ~400 with no loss of SLA compliance.
  */
 /*
- * TIMER SECURITY (defect D07):
+ * TIMER SECURITY (defects D07 and D09):
  * A container timer thread carries NO caller identity - it is unauthenticated.
  * Two consequences, both of which bit this bean:
  *   1. INBOUND: the @Timeout / @Schedule callbacks need @PermitAll, because with

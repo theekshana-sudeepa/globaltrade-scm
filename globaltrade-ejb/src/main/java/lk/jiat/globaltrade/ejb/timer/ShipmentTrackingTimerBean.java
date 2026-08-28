@@ -30,6 +30,8 @@ import java.util.logging.Logger;
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 @Audited
 @Monitored
+// Timer threads are unauthenticated: @PermitAll admits the callback (D07),
+// @RunAs gives its outbound calls an identity (D09). See CustomsDeadlineTimerBean.
 @PermitAll                    // inbound: let the container invoke the callbacks
 @RunAs(SecurityRoles.ADMIN)   // outbound: detectDelayedShipments() calls @RolesAllowed findOverdue()
 public class ShipmentTrackingTimerBean {

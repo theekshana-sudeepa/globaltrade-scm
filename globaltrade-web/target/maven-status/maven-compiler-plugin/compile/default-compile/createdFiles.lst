@@ -13,4 +13,5 @@ lk/jiat/globaltrade/web/mapper/InvalidCredentialsExceptionMapper.class
 lk/jiat/globaltrade/web/mapper/GenericExceptionMapper.class
 lk/jiat/globaltrade/web/resource/MonitoringResource.class
 lk/jiat/globaltrade/web/resource/ShipmentResource.class
+lk/jiat/globaltrade/web/mapper/UnauthorizedAccessExceptionMapper.class
 lk/jiat/globaltrade/web/resource/AuthResource$RefreshRequest.class

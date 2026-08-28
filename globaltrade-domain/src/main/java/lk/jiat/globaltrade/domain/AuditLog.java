@@ -27,7 +27,7 @@ public class AuditLog implements Serializable {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // D09: this column is sized for exactly one bare UUID. Any caller that
+    // D10: this column is sized for exactly one bare UUID. Any caller that
     // prefixes the correlation id will be silently rejected by MySQL, so the
     // timeout branch of SecurityAuditInterceptor must emit a plain UUID.
     @Column(name = "correlation_id", nullable = false, length = 36)

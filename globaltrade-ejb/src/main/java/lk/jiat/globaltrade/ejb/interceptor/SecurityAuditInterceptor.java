@@ -62,7 +62,7 @@ public class SecurityAuditInterceptor {
      */
     @AroundTimeout
     public Object aroundTimeout(InvocationContext ctx) throws Exception {
-        // D09: NOT "TIMER-" + uuid. audit_log.correlation_id is CHAR(36), sized for a
+        // D10: NOT "TIMER-" + uuid. audit_log.correlation_id is CHAR(36), sized for a
         // bare UUID, so the 42-char prefixed form was rejected by MySQL and EVERY
         // timer-run audit row was lost. The timer origin is already recorded twice
         // over - in action ("TIMER:<method>") and in principal ("system:timer") -

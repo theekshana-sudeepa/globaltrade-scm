@@ -1,5 +1,6 @@
 lk/jiat/globaltrade/ejb/InterceptorOverheadTest$Impl.class
 lk/jiat/globaltrade/ejb/TransactionAttributeSemanticsTest.class
+lk/jiat/globaltrade/ejb/TransactionAttributeSemanticsTest$1.class
 lk/jiat/globaltrade/ejb/InterceptorOverheadTest.class
 lk/jiat/globaltrade/ejb/ShipmentStatusTransitionTest$TestTransitionRules.class
 lk/jiat/globaltrade/ejb/TransactionAttributeSemanticsTest$Outcome.class

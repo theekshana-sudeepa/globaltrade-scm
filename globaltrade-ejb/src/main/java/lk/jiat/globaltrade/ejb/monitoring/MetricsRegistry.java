@@ -29,15 +29,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * 200 concurrent threads (Test Report section 3.2).
  *
  * SECURITY NOTE (defect D07):
- * WildFly runs with ejb3/default-missing-method-permissions-deny-access="true".
- * Under that setting, once a bean carries ANY security metadata, every method
- * that does NOT carry its own becomes implicitly DENIED TO ALL CALLERS - it is
- * not "unchecked". Because snapshot() and reset() are @RolesAllowed, record()
- * carried no metadata of its own and so became callable by NOBODY - including the
- * interceptor that feeds it on every monitored invocation. The class-level
- * @PermitAll below supplies the missing metadata for record() (and for any method
- * added later); the method-level @RolesAllowed on snapshot()/reset() still wins,
- * so the read and reset operations remain admin-restricted.
+ * WildFly sets default-missing-method-permissions-deny-access="true", so on a bean
+ * that carries ANY security metadata a method carrying none is DENIED, not unchecked.
+ * The class-level @PermitAll supplies that default; the method-level @RolesAllowed
+ * below still wins, so snapshot() and reset() stay admin-restricted.
  */
 @Singleton
 @Startup
@@ -54,11 +49,7 @@ public class MetricsRegistry {
         final AtomicLong failures    = new AtomicLong();
     }
 
-    /**
-     * Instrumentation sink on the invocation path of EVERY @Monitored method.
-     * MUST stay @PermitAll: it is called on behalf of whatever identity is running,
-     * including the container's UNAUTHENTICATED timer threads.
-     */
+    /** Sink on the path of every @Monitored call, including unauthenticated timer threads. */
     @PermitAll
     public void record(String method, long nanos, boolean failed) {
         Counters c = metrics.computeIfAbsent(method, k -> new Counters());
