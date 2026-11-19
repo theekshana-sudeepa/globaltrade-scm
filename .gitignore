@@ -1,0 +1,47 @@
+# Target build directories and compiled classes
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.rar
+
+# IDE and Editor files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+nbproject/private/
+*.suo
+*.user
+
+# Environment and secrets
+.env
+.env*.local
+*.env
+!.env.example
+
+# Logs and runtime artifacts
+*.log
+logs/
+run/*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# WildFly / Application Server runtime
+wildfly-*/
+standalone/data/
+standalone/log/
+standalone/tmp/

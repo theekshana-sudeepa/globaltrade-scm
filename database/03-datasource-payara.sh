@@ -9,6 +9,8 @@
 #   statement-cache-size 100 - prepared-statement reuse for the hot timer queries
 set -e
 ASADMIN=${ASADMIN:-asadmin}
+DB_USER="${DB_USER:-globaltrade}"
+DB_PASS="${DB_PASS:-CHANGE_ME}"
 
 $ASADMIN create-jdbc-connection-pool \
   --datasourceclassname com.mysql.cj.jdbc.MysqlDataSource \
@@ -16,7 +18,7 @@ $ASADMIN create-jdbc-connection-pool \
   --steadypoolsize 20 --maxpoolsize 100 \
   --statementcachesize 100 \
   --isconnectvalidatereq=true --validationmethod=table --validationtable=DUAL \
-  --property "user=globaltrade:password=CHANGE_ME:serverName=localhost:portNumber=3306:databaseName=globaltrade:useSSL=false:allowPublicKeyRetrieval=true:serverTimezone=UTC:rewriteBatchedStatements=true" \
+  --property "user=${DB_USER}:password=${DB_PASS}:serverName=localhost:portNumber=3306:databaseName=globaltrade:useSSL=false:allowPublicKeyRetrieval=true:serverTimezone=UTC:rewriteBatchedStatements=true" \
   GlobalTradePool
 
 $ASADMIN create-jdbc-resource --connectionpoolid GlobalTradePool jdbc/globaltrade
