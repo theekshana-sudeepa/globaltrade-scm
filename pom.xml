@@ -9,7 +9,23 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>GlobalTrade Supply Chain Platform</name>
-    <description>Jakarta EE 10 modular supply chain management system - BCD II Final Assessment</description>
+    <description>Enterprise Jakarta EE 10 modular supply chain management and automated customs compliance platform</description>
+    <url>https://github.com/theekshana-sudeepa/globaltrade-scm</url>
+
+    <licenses>
+        <license>
+            <name>MIT</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Theekshana Sudeepa</name>
+            <url>https://github.com/theekshana-sudeepa</url>
+        </developer>
+    </developers>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
