@@ -243,7 +243,7 @@ footer.foot { color: var(--ink-muted); font-size: 11.5px; text-align: center; pa
       <div class="brand-mark">GT</div>
       <div>
         <h1>GlobalTrade — Supply Chain Operations Console</h1>
-        <p class="sub">JIAT/BCD II/EX/01 · Jakarta EE 10 · WildFly · MySQL</p>
+        <p class="sub">Jakarta EE 10 · EJB 4.0 · WildFly · MySQL</p>
       </div>
     </div>
     <span class="chip" id="connChip"><span class="dot" style="background:var(--ink-muted)"></span><span id="connText">Not connected</span></span>
@@ -857,7 +857,7 @@ footer.foot { color: var(--ink-muted); font-size: 11.5px; text-align: center; pa
       "<code>web.xml</code> declares a CONFIDENTIAL transport guarantee on " +
       "<code>/api/*</code>, so calls from an <code>http:</code> page are redirected to " +
       "TLS and blocked by the browser as cross-origin.<br><br>" +
-      '<a href="' + httpsUrl + '" style="color:var(--series-1)">' + httpsUrl + "</a>" +
+      '<a href="' + esc(httpsUrl) + '" style="color:var(--series-1)">' + esc(httpsUrl) + "</a>" +
       " — accept the self-signed certificate once, then sign in.";
   }
 })();

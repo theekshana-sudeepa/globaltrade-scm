@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -72,9 +73,17 @@ public final class JwtUtil {
 
     public static DecodedJWT parseToken(String token) { return VERIFIER.verify(token); }
 
+    /** Single-pass signature and claim verification without double-parsing on the hot path. */
+    public static Optional<DecodedJWT> verify(String token) {
+        try {
+            return Optional.of(VERIFIER.verify(token));
+        } catch (JWTVerificationException e) {
+            return Optional.empty();
+        }
+    }
+
     public static boolean isValid(String token) {
-        try { parseToken(token); return true; }
-        catch (JWTVerificationException e) { return false; }
+        return verify(token).isPresent();
     }
 
     public static long accessTokenSeconds() { return ACCESS_TOKEN_SECONDS; }

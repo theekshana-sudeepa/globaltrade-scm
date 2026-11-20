@@ -28,10 +28,19 @@ public class CustomsGateway {
     private static final Logger LOG = Logger.getLogger(CustomsGateway.class.getName());
 
     private static final int  FAILURE_THRESHOLD = 5;
-    private static final long OPEN_DURATION_MS  = 30_000L;
+    private static final long DEFAULT_OPEN_DURATION_MS = 30_000L;
 
+    private final long openDurationMs;
     private final AtomicInteger consecutiveFailures = new AtomicInteger();
     private final AtomicReference<Instant> openedAt = new AtomicReference<>();
+
+    public CustomsGateway() {
+        this(DEFAULT_OPEN_DURATION_MS);
+    }
+
+    protected CustomsGateway(long openDurationMs) {
+        this.openDurationMs = openDurationMs;
+    }
 
     public String submit(String hsCode, String destinationCountry) {
         if (isOpen()) {
@@ -56,16 +65,18 @@ public class CustomsGateway {
     private boolean isOpen() {
         Instant opened = openedAt.get();
         if (opened == null) return false;
-        if (Instant.now().isAfter(opened.plusMillis(OPEN_DURATION_MS))) {
-            openedAt.set(null);              // half-open: allow one probe through
-            consecutiveFailures.set(FAILURE_THRESHOLD - 1);
-            return false;
+        if (Instant.now().isAfter(opened.plusMillis(openDurationMs))) {
+            // Atomic half-open transition: only one probe resets the window.
+            if (openedAt.compareAndSet(opened, null)) {
+                consecutiveFailures.set(FAILURE_THRESHOLD - 1);
+                return false;
+            }
         }
         return true;
     }
 
-    /** Replace with a real JAX-WS / JAX-RS client in production. */
-    private String callRemoteGateway(String hsCode, String destinationCountry) {
+    /** Override or replace with a production JAX-WS / JAX-RS client implementation. */
+    protected String callRemoteGateway(String hsCode, String destinationCountry) {
         if (hsCode == null) {
             throw new IllegalArgumentException("hsCode required");
         }

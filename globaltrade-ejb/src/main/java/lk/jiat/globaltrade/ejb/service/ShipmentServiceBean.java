@@ -45,9 +45,6 @@ public class ShipmentServiceBean implements ShipmentService {
     @EJB
     private InventoryService inventoryService;
 
-    @EJB
-    private AuditService auditService;
-
     // ------------------------------------------------------------------
     // REQUIRED - the workhorse. Join the caller's transaction or start one.
     // ------------------------------------------------------------------

@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -47,8 +48,9 @@ public class JwtAuthenticationMechanism implements HttpAuthenticationMechanism {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith(BEARER)) {
             String token = header.substring(BEARER.length()).trim();
-            if (JwtUtil.isValid(token)) {
-                DecodedJWT jwt = JwtUtil.parseToken(token);
+            Optional<DecodedJWT> verified = JwtUtil.verify(token);
+            if (verified.isPresent()) {
+                DecodedJWT jwt = verified.get();
                 List<String> claimed = jwt.getClaim("roles").asList(String.class);
                 Set<String> roles = claimed != null ? new HashSet<>(claimed) : Set.of();
                 return context.notifyContainerAboutLogin(jwt.getSubject(), roles);

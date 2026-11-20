@@ -66,11 +66,18 @@ public class ShipmentResource {
     public Response updateStatus(@PathParam("trackingNumber") String trackingNumber,
                                  Map<String, String> body) throws ShipmentNotFoundException {
         String raw = body == null ? null : body.get("status");
-        if (raw == null) {
+        if (raw == null || raw.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity(Map.of("error", "status is required")).build();
         }
-        shipmentService.updateStatus(trackingNumber, ShipmentStatus.valueOf(raw));
+        ShipmentStatus parsed;
+        try {
+            parsed = ShipmentStatus.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(Map.of("error", "Invalid shipment status: " + raw)).build();
+        }
+        shipmentService.updateStatus(trackingNumber, parsed);
         return Response.noContent().build();                      // 204
     }
 
@@ -82,10 +89,15 @@ public class ShipmentResource {
     public Response allocate(@PathParam("trackingNumber") String trackingNumber,
                              Map<String, Object> body)
             throws ShipmentNotFoundException, InsufficientInventoryException {
-        shipmentService.allocateAndDispatch(trackingNumber,
-                (String) body.get("sku"),
-                (String) body.get("warehouse"),
-                ((Number) body.get("quantity")).intValue());
+        if (body == null
+                || !(body.get("sku") instanceof String sku) || sku.isBlank()
+                || !(body.get("warehouse") instanceof String warehouse) || warehouse.isBlank()
+                || !(body.get("quantity") instanceof Number qty) || qty.intValue() <= 0) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(Map.of("error", "sku, warehouse, and positive quantity are required"))
+                           .build();
+        }
+        shipmentService.allocateAndDispatch(trackingNumber, sku.trim(), warehouse.trim(), qty.intValue());
         return Response.status(Response.Status.CREATED)
                        .entity(Map.of("message", "allocated")).build();
     }
