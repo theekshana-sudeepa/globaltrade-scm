@@ -15,6 +15,9 @@ set -uo pipefail          # deliberately NOT -e: duplicates must not abort the r
 
 WILDFLY_HOME="${WILDFLY_HOME:?Set WILDFLY_HOME to your WildFly install directory}"
 CLI="$WILDFLY_HOME/bin/jboss-cli.sh --connect"
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-3306}"
+DB_NAME="${DB_NAME:-globaltrade}"
 DB_USER="${DB_USER:-globaltrade}"
 DB_PASS="${DB_PASS:-CHANGE_ME}"
 
@@ -62,7 +65,7 @@ run "data-source GlobalTradeDS" "data-source add \
 --name=GlobalTradeDS \
 --jndi-name=java:/jdbc/globaltrade \
 --driver-name=mysql \
---connection-url=jdbc:mysql://localhost:3306/globaltrade?serverTimezone=UTC\&useSSL=false\&allowPublicKeyRetrieval=true\&rewriteBatchedStatements=true \
+--connection-url=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=UTC\&useSSL=false\&allowPublicKeyRetrieval=true\&rewriteBatchedStatements=true \
 --user-name=$DB_USER \
 --password=$DB_PASS \
 --min-pool-size=20 \
