@@ -23,25 +23,25 @@
 
 ```mermaid
 flowchart TB
-    Client["Client & Operations Console<br/>HTTPS Port 8443 / REST API"]
+    Client["Client and Operations Console<br/>HTTPS Port 8443 / REST API"]
 
-    subgraph EAR["globaltrade-scm.ear (Jakarta EE 10 Full Platform)"]
-        subgraph WEB["globaltrade-web.war (JAX-RS & Security Layer)"]
+    subgraph EAR["globaltrade-scm.ear - Jakarta EE 10 Full Platform"]
+        subgraph WEB["globaltrade-web.war - JAX-RS and Security Layer"]
             JwtMech["JwtAuthenticationMechanism<br/>Custom Jakarta Security"]
             RestApi["REST Resources<br/>Auth, Shipments, Monitoring"]
             ExMappers["JAX-RS Exception Mappers<br/>401 / 403 / 404 / 409 / 422 JSON"]
         end
 
-        subgraph EJB["globaltrade-ejb.jar (Business & Scheduling Layer)"]
-            Interceptors["CDI Interceptor Chain<br/>Correlation, Security, Compliance, Metrics, Audit"]
+        subgraph EJB["globaltrade-ejb.jar - Business and Scheduling Layer"]
+            Interceptors["CDI Interceptor Chain<br/>Correlation, Validation, Compliance, Audit, Metrics"]
             Services["Stateless EJB 4.0 Services<br/>Shipment, Inventory, Customs, Vendor, Audit"]
             Timers["Cluster-Safe Persistent Timers<br/>Tracking, Deadlines, Replenishment, Maintenance"]
-            Gateways["External Integrations<br/>CarrierIntegrationBean & CustomsGateway"]
+            Gateways["External Integrations<br/>CarrierIntegrationBean and CustomsGateway"]
         end
 
         subgraph LIB["EAR Shared Libraries"]
-            Domain["globaltrade-domain.jar<br/>JPA 3.1 Entities & Hibernate L2 Cache"]
-            Common["globaltrade-common.jar<br/>DTOs, Roles & Zero-Stack Exceptions"]
+            Domain["globaltrade-domain.jar<br/>JPA 3.1 Entities and Hibernate L2 Cache"]
+            Common["globaltrade-common.jar<br/>DTOs, Roles and Zero-Stack Exceptions"]
         end
     end
 
@@ -75,25 +75,27 @@ sequenceDiagram
     participant Auth as AuthResource
     participant Mech as JwtAuthenticationMechanism
     participant Rest as ShipmentResource
+    participant Chain as CDI Interceptor Chain
     participant EJB as ShipmentServiceBean
     participant Audit as AuditServiceBean
     participant DB as MySQL JTA Pool
 
-    Client->>Auth: POST /api/auth/login (Credentials)
-    Auth->>DB: Validate PBKDF2 Hash & Lockout State
+    Client->>Auth: POST /api/auth/login with credentials
+    Auth->>DB: Validate PBKDF2 hash and lockout state
     Note over Auth,DB: dontRollbackOn InvalidCredentialsException preserves brute-force counter
-    Auth-->>Client: 200 OK (HS256 Access Token + Rotating Refresh Token)
+    Auth-->>Client: 200 OK with HS256 access token and rotating refresh token
 
-    Client->>Mech: PUT /api/shipments/TRK-001/status (Bearer JWT)
-    Mech->>Mech: Verify Signature, Issuer, Audience & Expiry
-    Mech->>Rest: Forward Authenticated SecurityContext
-    Rest->>EJB: updateStatus (TX: REQUIRED)
-    EJB->>EJB: Evaluate Declarative & Programmatic RBAC
-    EJB->>DB: Persist Validated State Transition
-    EJB->>Audit: recordAudit (TX: REQUIRES_NEW)
-    Audit->>DB: Append Immutable AuditLog Row
-    Audit-->>EJB: Independent Audit Committed
-    EJB-->>Rest: Transition Complete
+    Client->>Mech: PUT /api/shipments/TRK-001/status with Bearer JWT
+    Mech->>Mech: Single-pass HS256 verify for signature, issuer, audience, expiry
+    Mech->>Rest: Forward authenticated SecurityContext
+    Rest->>Chain: Invoke updateStatus via @Local EJB proxy
+    Chain->>EJB: Proceed with CorrelationContext and TX REQUIRED
+    EJB->>EJB: Evaluate declarative and programmatic RBAC
+    EJB->>DB: Persist validated state transition
+    Chain->>Audit: recordAsync with TX REQUIRES_NEW
+    Audit->>DB: Append immutable AuditLog row
+    Audit-->>Chain: Independent audit committed
+    EJB-->>Rest: Transition complete
     Rest-->>Client: 204 No Content
 ```
 
@@ -199,6 +201,20 @@ erDiagram
 
 ---
 
+## Enterprise Integration Patterns & SOLID Architecture
+
+| Principle / Pattern | Concrete Classes & Artifacts | Architectural Implementation |
+|---|---|---|
+| **Single Responsibility (SRP)** | `ShipmentServiceBean`, `InventoryServiceBean`, `CustomsDeclarationServiceBean`, `VendorServiceBean`, `AuditServiceBean`, `JwtUtil`, `PasswordHasher`, `RefreshTokenService`, `UserAccountService` | Each EJB and CDI service owns one bounded subdomain (logistics state machine, pessimistic stock locking, BMT customs filing, vendor SLA scoring, async audit persistence, cryptographic token/hash lifecycle). |
+| **Open/Closed Principle (OCP)** | `@Audited`, `@ComplianceChecked`, `@Monitored`, `CustomsGateway#callRemoteGateway`, JAX-RS `@Provider` mappers (`SupplyChainExceptionMapper`, `UnauthorizedAccessExceptionMapper`, `SecurityExceptionMapper`, `InvalidCredentialsExceptionMapper`, `GenericExceptionMapper`) | New regulatory rules, telemetry sinks, gateway adapters, or domain exception HTTP mappings plug in via CDI bindings, subclass extension, or `@Provider` registration without modifying existing business beans. |
+| **Liskov Substitution & Interface Segregation (LSP / ISP)** | `@Local` contracts (`ShipmentService`, `InventoryService`, `CustomsDeclarationService`, `VendorService`, `AuditService`), `@Remote` (`CarrierIntegrationRemote`), `SupplyChainException` hierarchy | Fine-grained local interfaces eliminate serialization overhead for intra-EAR calls while isolating cross-JVM carrier traffic behind a narrow `@Remote` boundary; domain exceptions substitute cleanly across mappers. |
+| **Dependency Inversion (CDI / EJB DI)** | `IdentityStoreHandler` -> `SupplyChainIdentityStore`, `@EJB` interface injection (`ShipmentService`, `InventoryService`, `AuditService`), `@PersistenceContext("GlobalTradePU")` | High-level REST resources, timers, and interceptors depend strictly on interfaces and container-managed abstractions; swapping WildFly for Payara requires only substituting `persistence.xml`. |
+| **AOP Cross-Cutting Concerns** | `SecurityAuditInterceptor` -> `VendorDataValidationInterceptor` -> `ComplianceCheckInterceptor` -> `AuditLoggingInterceptor` -> `PerformanceMonitoringInterceptor`, `CorrelationContext`, `MetricsRegistry` | Deterministically ordered (`@Priority`) 5-stage CDI interceptor pipeline propagates correlation IDs, normalizes inbound vendor payloads, enforces WCO SAFE/embargo rules, writes `REQUIRES_NEW` async audit trails, and records lock-free CAS latency metrics. |
+| **External Carrier & Customs Gateway Decoupling (EIP)** | `CarrierIntegrationBean`, `CarrierIntegrationRemote`, `CustomsGateway`, `CustomsDeclarationServiceBean` | `CarrierIntegrationBean` enforces `TransactionAttributeType.NEVER` so outbound carrier HTTP calls never pin DB connections; `CustomsGateway` wraps remote calls in a lock-free `@Singleton` Circuit Breaker with atomic CAS half-open recovery; `CustomsDeclarationServiceBean` uses BMT split transactions to release JTA connections across slow national gateway filings. |
+| **Stateless JWT & Defense-in-Depth Security** | `JwtAuthenticationMechanism`, `JwtUtil`, `PasswordHasher`, `SupplyChainIdentityStore`, `AuthResource`, `web.xml` | Custom Jakarta Security `HttpAuthenticationMechanism` performs single-pass HS256 verification and calls `notifyContainerAboutLogin()` so caller identity flows into EJB `SessionContext` for declarative (`@RolesAllowed`) + programmatic vendor-ownership RBAC, reinforced by fail-fast `GT_JWT_SECRET`, PBKDF2-HMAC-SHA256 (210k iterations), rotating refresh tokens, and forced TLS (`CONFIDENTIAL`). |
+
+---
+
 ## Core Engineering Highlights
 
 - **Strict Multi-Module EAR Separation:** Decouples shared contracts (`globaltrade-common`), JPA entities (`globaltrade-domain`), transactional EJBs (`globaltrade-ejb`), and JAX-RS endpoints (`globaltrade-web`) into a clean `globaltrade-scm.ear` deployment with container-provided dependencies.
@@ -210,6 +226,18 @@ erDiagram
 - **AOP Cross-Cutting CDI Interceptors:** Modular interceptors (`AuditLoggingInterceptor`, `ComplianceCheckInterceptor`, `PerformanceMonitoringInterceptor`, `SecurityAuditInterceptor`, `VendorDataValidationInterceptor`) with request-scoped `CorrelationContext` propagation.
 - **Cluster-Safe Persistent EJB Timers:** Automatic and programmatic timers (`ShipmentTrackingTimerBean`, `CustomsDeadlineTimerBean`, `InventoryReplenishmentTimerBean`, `SecurityMaintenanceTimerBean`) backed by a shared MySQL timer datastore to guarantee single-node execution across clusters.
 - **High-Performance ORM & Exception Optimization:** Selective Hibernate second-level caching (`ENABLE_SELECTIVE`), JDBC batch writes (`batch_size=50` + `rewriteBatchedStatements=true`), and lightweight zero-stack-trace application exceptions benchmarked at **>140x faster** than standard exception allocation.
+
+---
+
+## TLS Operations & Security Console (`globaltrade-web`)
+
+`globaltrade-web/src/main/webapp/index.html` ships a zero-dependency, self-contained HTML/CSS/JS Operations Console (light/dark theme parity, in-memory bearer token handling, XSS-safe DOM rendering) served over TLS at `https://localhost:8443/globaltrade/`:
+
+- **Session & JWT Inspector:** Authenticates via `POST /api/auth/login`, displays active principal/roles and token TTL, enforces HTTPS scheme guidance matching `web.xml`'s `CONFIDENTIAL` constraint, and revokes sessions via `POST /api/auth/logout`.
+- **EJB Timer Service Monitor:** Calls `GET /api/admin/monitoring/timers` to inspect persistent vs. in-memory automatic `@Schedule` timers alongside active programmatic `TimerService` counts.
+- **Interceptor Telemetry Visualizer:** Queries `GET /api/admin/monitoring/metrics` to render mean/max latency bar charts and failure counts collected by `PerformanceMonitoringInterceptor` and `MetricsRegistry`.
+- **Instrumented 3-Leg Operation Pipeline:** Exercises `GET /api/shipments/{trackingNumber}` -> `PUT /api/shipments/{trackingNumber}/status` -> `GET /api/admin/monitoring/metrics` end-to-end and contrasts browser round-trip timing against server-side business-method mean latency.
+- **Live Security Probe Suite:** Fires real browser-side attacks against the deployed API to verify HTTP `401` (missing token, tampered HS256 signature, bad credentials), HTTP `403` (wrong role on `/admin/monitoring/metrics`, horizontal vendor privilege escalation on cross-vendor shipments), and HTTP `404` (SQL injection payload safely parameterized by JPA).
 
 ---
 
@@ -304,7 +332,7 @@ mysql -u root -p < database/02-seed.sql
 mvn clean package
 ```
 
-This compiles all five modules, executes the 25 JUnit 5 tests (transaction attribute semantics, shipment state machine, interceptor overhead, and exception benchmarks), and outputs `globaltrade-ear/target/globaltrade-scm.ear`.
+This compiles all five modules, executes the 28 JUnit 5 tests (transaction attribute semantics, shipment state machine, customs gateway circuit breaker, interceptor overhead, and exception benchmarks), and outputs `globaltrade-ear/target/globaltrade-scm.ear`.
 
 ### 4. Provision & Deploy to WildFly
 
